@@ -21,19 +21,16 @@ class Recipe:
         return self.name
 
     def get_cook_time(self):
-        return self.format_time(self.cook_time)
+        hours, minutes = divmod(self.cook_time, 60)
+        return f"{hours:02}:{minutes:02}"
 
     def get_prep_time(self):
-        return self.format_time(self.prep_time)
+        hours, minutes = divmod(self.prep_time, 60)
+        return f"{hours:02}:{minutes:02}"
 
     def get_recipe_yield(self):
         return self.recipe_yield
-
-    def format_time(self, time):
-        # Assuming time is in minutes for simplicity
-        hours, minutes = divmod(time, 60)
-        return f"{hours:02}:{minutes:02}"
-
+        
     def set_image(self, url, index):
         slash = url.rfind('/')
         if slash != -1:
