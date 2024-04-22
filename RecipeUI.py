@@ -1,91 +1,98 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QGridLayout, QMessageBox
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt
-from RecipeProcessor import RecipeProcessor  
+from RecipeProcessor import RecipeProcessor
 
 class RecipeUI(QWidget):
-    def __init__(self, recipes):
+    def __init__(self):
         super().__init__()
-        self.recipes = recipes
-        self.current_page = 0
-        self.recipes_per_page = 12  # Adjust number of recipes per page as needed
-        self.displayed_recipes = self.recipes[:self.recipes_per_page]
+        self.processor = RecipeProcessor()
+        self.processor.load_recipes('recipes.json')
+        self.displayed_recipes = self.processor.get_recipes()
+        self.current_index = 0
         self.setup_window()
-        self.layout_ui()
+        self.layout_ui(self.displayed_recipes)
 
     def setup_window(self):
         self.setWindowTitle("Recipe Viewer")
-        self.setGeometry(100, 100, 800, 600)  # Set initial size and position
-        self.layout = QVBoxLayout()
-        self.setLayout(self.layout)
-        self.update_ui()
+        self.setGeometry(100, 100, 800, 600)
 
-    def update_ui(self):
-        self.layout.clear()
-        for recipe in self.displayed_recipes:
-            label = QLabel(recipe.get_name())
-            button = QPushButton('View Recipe')
-            self.layout.addWidget(label)
-            self.layout.addWidget(button)
-        self.add_navigation_buttons()
+    def layout_ui(self, recipes):
+        self.layout = QVBoxLayout(self)
+        self.grid = QGridLayout()
+        self.layout.addLayout(self.grid)
+        self.update_grid(recipes[:4])
 
-    # Implement the rest of the methods for navigation and search
-    def add_navigation_buttons(self):
-        nav_layout = QHBoxLayout()
-        first_btn = QPushButton('First')
-        first_btn.clicked.connect(self.first)
-        previous_btn = QPushButton('Previous')
-        previous_btn.clicked.connect(self.previous)
-        next_btn = QPushButton('Next')
-        next_btn.clicked.connect(self.next)
-        last_btn = QPushButton('Last')
-        last_btn.clicked.connect(self.last)
-        nav_layout.addWidget(first_btn)
-        nav_layout.addWidget(previous_btn)
-        nav_layout.addWidget(next_btn)
-        nav_layout.addWidget(last_btn)
-        self.layout.addLayout(nav_layout)
+        # Navigation buttons
+        nav_buttons = QHBoxLayout()
+        self.prev_button = QPushButton("Previous")
+        self.prev_button.clicked.connect(self.previous)
+        nav_buttons.addWidget(self.prev_button)
+
+        self.next_button = QPushButton("Next")
+        self.next_button.clicked.connect(self.next)
+        nav_buttons.addWidget(self.next_button)
+
+        self.layout.addLayout(nav_buttons)
+
+    def update_grid(self, recipes):
+        for i in reversed(range(self.grid.count())):
+            widget = self.grid.itemAt(i).widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        for i, recipe in enumerate(recipes):
+            row, col = divmod(i, 2)
+            recipe_label = QLabel(f"{recipe.get_name()}\nCook Time: {recipe.get_cook_time()}\nPrep Time: {recipe.get_prep_time()}")
+            self.grid.addWidget(recipe_label, row * 2, col)
+            image_filename = recipe.get_image()
+            if image_filename:
+                pixmap = QPixmap(image_filename)
+                image_label = QLabel()
+                image_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
+                self.grid.addWidget(image_label, row * 2 + 1, col)
+
+    def display_recipes(self):
+        self.update_grid(self.displayed_recipes[self.current_index:self.current_index+4])
+
+    def next(self):
+        if self.current_index + 4 < len(self.displayed_recipes):
+            self.current_index += 4
+            self.display_recipes()
 
     def previous(self):
-        if self.current_page > 0:
-            self.current_page -= 1
-            start_index = self.current_page * self.recipes_per_page
-            end_index = start_index + self.recipes_per_page
-            self.displayed_recipes = self.recipes[start_index:end_index]
-            self.update_ui()
+        if self.current_index > 0:
+            self.current_index -= 4
+            self.display_recipes()
 
     def first(self):
-        self.current_page = 0
-        self.displayed_recipes = self.recipes[:self.recipes_per_page]
-        self.update_ui()
+        self.current_index = 0
+        self.display_recipes()
 
     def last(self):
-        total_pages = len(self.recipes) // self.recipes_per_page
-        self.current_page = total_pages
-        start_index = self.current_page * self.recipes_per_page
-        self.displayed_recipes = self.recipes[start_index:start_index + self.recipes_per_page]
-        self.update_ui()
+        self.current_index = max(0, len(self.displayed_recipes) - 4)
+        self.display_recipes()
 
-    def search(self, search_query):
-        self.displayed_recipes = [recipe for recipe in self.recipes if
-                                  search_query.lower() in recipe.get_name().lower()]
-        self.current_page = 0
-        self.update_ui()
+    def search(self, recipe_keywords):
+        keyword = recipe_keywords.lower()
+        self.displayed_recipes = [recipe for recipe in self.processor.get_recipes()
+                                  if keyword in recipe.get_name().lower() or
+                                     keyword in recipe.description.lower() or
+                                     keyword in " ".join(recipe.ingredients).lower()]
+        self.current_index = 0
+        self.display_recipes()
 
     def reset(self):
-        self.displayed_recipes = self.recipes[:self.recipes_per_page]
-        self.current_page = 0
-        self.update_ui()
+        self.displayed_recipes = self.processor.get_recipes()
+        self.current_index = 0
+        self.display_recipes()
 
 def main():
-    app = QApplication([])
-    processor = RecipeProcessor()
-    processor.load_recipes('recipes.json')
-    recipes = processor.get_recipes()       # Retrieve the list of recipes from the processor
-    ui = RecipeUI(recipes)                  # Pass the recipes to the UI
+    app = QApplication(sys.argv)
+    ui = RecipeUI()
     ui.show()
-    app.exec_()
+    sys.exit(app.exec_())
 
 if __name__ == '__main__':
     main()
