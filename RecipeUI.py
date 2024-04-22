@@ -34,7 +34,7 @@ class RecipeUI(QWidget):
 
         self.layout.addLayout(nav_buttons)
 
-def update_grid(self, recipes):
+  def update_grid(self, recipes):
         for i in reversed(range(self.grid.count())):
             widget = self.grid.itemAt(i).widget()
             if widget is not None:
@@ -50,23 +50,26 @@ def update_grid(self, recipes):
                 image_label.setPixmap(pixmap.scaled(200, 200, Qt.KeepAspectRatio))
                 self.grid.addWidget(image_label, row * 2 + 1, col)
 
-    def first(self):
+ def first(self):
         self.current_index = 0
         self.display_recipes()
 
-    def last(self):
+ def last(self):
         self.current_index = max(0, len(self.processor.get_recipes()) - 4)
         self.display_recipes()
 
-    def next(self):
+ def next(self):
         if self.current_index + 4 < len(self.processor.get_recipes()):
             self.current_index += 4
             self.display_recipes()
 
-    def previous(self):
+ def previous(self):
         if self.current_index > 0:
             self.current_index -= 4
             self.display_recipes()
+
+ def search():
+ def reset():
 
 def main():
     app = QApplication(sys.argv)
